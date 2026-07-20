@@ -1,0 +1,27 @@
+services:
+  server:
+    build: .
+    environment:
+      - POSTGRES_URI=postgres://db_user:db_pass@db:5432/shops
+      - DOCKER=1
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:18.4
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_USER=db_user
+      - POSTGRES_PASSWORD=db_pass
+      - POSTGRES_DB=shops
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+volumes:
+  postgres_data:
