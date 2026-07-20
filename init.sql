@@ -6,5 +6,6 @@ CREATE TABLE IF NOT EXISTS entry (
     waiting_cups INT NOT NULL,
     waiting_time INT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    coordinates POINT NOT NULL,
     PRIMARY KEY (store_id, vendor, created_at)
 )

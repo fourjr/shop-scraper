@@ -43,6 +43,8 @@ type Item struct {
 	WaitingCups   int    `json:"waitingCups"`
 	WaitingTime   int    `json:"waitingTime"`
 	RunningStatus int    `json:"runningStatus"`
+	Longitude     string `json:"longitude"`
+	Latitude      string `json:"latitude"`
 	RawData       string `json:"-"`
 }
 
@@ -111,10 +113,10 @@ func (c *Client) updateDb(ctx context.Context, items *[]Item) error {
 		return nil
 	}
 
-	const fieldsPerItem = 5
+	const fieldsPerItem = 7
 	var query strings.Builder
 	query.WriteString(`INSERT INTO entry (
-		store_id, store_name, vendor, raw_data, waiting_cups, waiting_time
+		store_id, store_name, vendor, raw_data, waiting_cups, waiting_time, coordinates
 	) VALUES `)
 
 	args := make([]any, 0, len(*items)*fieldsPerItem)
@@ -126,14 +128,16 @@ func (c *Client) updateDb(ctx context.Context, items *[]Item) error {
 		parameter := i*fieldsPerItem + 1
 		fmt.Fprintf(
 			&query,
-			"($%d, $%d, 'chagee', $%d::jsonb, $%d, $%d)",
+			"($%d, $%d, 'chagee', $%d::jsonb, $%d, $%d, point($%d, $%d))",
 			parameter,
 			parameter+1,
 			parameter+2,
 			parameter+3,
 			parameter+4,
+			parameter+5,
+			parameter+6,
 		)
-		args = append(args, item.StoreNo, item.StoreName, item.RawData, item.WaitingCups, item.WaitingTime)
+		args = append(args, item.StoreNo, item.StoreName, item.RawData, item.WaitingCups, item.WaitingTime, item.Longitude, item.Latitude)
 	}
 
 	if _, err := c.db.Exec(ctx, query.String(), args...); err != nil {
@@ -187,4 +191,6 @@ func main() {
 	if err := c.updateDb(context.Background(), items); err != nil {
 		log.Fatalf("Database update failed: %v", err)
 	}
+	now := time.Now().Format(time.RFC3339)
+	log.Printf("[%s] Successfully updated %d items", now, len(*items))
 }

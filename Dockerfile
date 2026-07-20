@@ -68,6 +68,7 @@ RUN adduser \
     appuser
 USER appuser
 
+ENV TZ=Asia/Singapore
 # Copy the executable from the "build" stage.
 COPY --from=build /bin/server /bin/
 
