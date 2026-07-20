@@ -192,5 +192,5 @@ func main() {
 		log.Fatalf("Database update failed: %v", err)
 	}
 	now := time.Now().Format(time.RFC3339)
-	log.Printf("[%s] Successfully updated %d items", now, len(*items))
+	log.Printf("[%s] Successfully added %d items", now, len(*items))
 }
