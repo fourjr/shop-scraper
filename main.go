@@ -191,6 +191,5 @@ func main() {
 	if err := c.updateDb(context.Background(), items); err != nil {
 		log.Fatalf("Database update failed: %v", err)
 	}
-	now := time.Now().Format(time.RFC3339)
-	log.Printf("[%s] Successfully added %d items", now, len(*items))
+	log.Printf("Successfully added %d items", len(*items))
 }
