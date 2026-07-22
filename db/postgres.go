@@ -25,12 +25,12 @@ func NewPostgres(ctx context.Context, uri string) (*Postgres, error) {
 	return pg, nil
 }
 
-func (c *Postgres) AddItems(ctx context.Context, items *[]Item) error {
+func (c *Postgres) AddItems(ctx context.Context, items *[]Item, vendor string) error {
 	if items == nil || len(*items) == 0 {
 		return nil
 	}
 
-	const fieldsPerItem = 7
+	const fieldsPerItem = 8
 	var query strings.Builder
 	query.WriteString(`INSERT INTO entry (
 		store_id, store_name, vendor, raw_data, waiting_cups, waiting_time, coordinates
@@ -45,7 +45,7 @@ func (c *Postgres) AddItems(ctx context.Context, items *[]Item) error {
 		parameter := i*fieldsPerItem + 1
 		fmt.Fprintf(
 			&query,
-			"($%d, $%d, 'chagee', $%d::jsonb, $%d, $%d, point($%d, $%d))",
+			"($%d, $%d, $%d, $%d::jsonb, $%d, $%d, point($%d, $%d))",
 			parameter,
 			parameter+1,
 			parameter+2,
@@ -53,8 +53,9 @@ func (c *Postgres) AddItems(ctx context.Context, items *[]Item) error {
 			parameter+4,
 			parameter+5,
 			parameter+6,
+			parameter+7,
 		)
-		args = append(args, item.StoreNo, item.StoreName, item.RawData, item.WaitingCups, item.WaitingTime, item.Longitude, item.Latitude)
+		args = append(args, item.StoreId, item.StoreName, vendor, item.RawData, item.WaitingCups, item.WaitingTime, item.Longitude, item.Latitude)
 	}
 
 	if _, err := c.db.Exec(ctx, query.String(), args...); err != nil {

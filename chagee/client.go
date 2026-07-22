@@ -57,7 +57,7 @@ func parseResponse(body io.ReadCloser) (*[]db.Item, error) {
 
 	items := make([]db.Item, 0, len(response.Data.PageList))
 	for _, rawItem := range response.Data.PageList {
-		var item db.Item
+		var item Item
 		if err := json.Unmarshal(rawItem, &item); err != nil {
 			return nil, fmt.Errorf("failed to decode item: %v", err)
 		}
@@ -67,7 +67,7 @@ func parseResponse(body io.ReadCloser) (*[]db.Item, error) {
 		}
 		// Keep the complete item object for insertion into the raw_data JSONB column.
 		item.RawData = string(rawItem)
-		items = append(items, item)
+		items = append(items, item.ToDBItem())
 	}
 
 	return &items, nil

@@ -3,16 +3,16 @@ package db
 import "context"
 
 type Item struct {
-	StoreNo       string `json:"storeNo"`
-	StoreName     string `json:"storeName"`
-	WaitingCups   int    `json:"waitingCups"`
-	WaitingTime   int    `json:"waitingTime"`
-	RunningStatus int    `json:"runningStatus"`
-	Longitude     string `json:"longitude"`
-	Latitude      string `json:"latitude"`
-	RawData       string `json:"-"`
+	StoreId       string
+	StoreName     string
+	WaitingCups   int
+	WaitingTime   int
+	RunningStatus int
+	Longitude     string
+	Latitude      string
+	RawData       string
 }
 
 type Client interface {
-	AddItems(ctx context.Context, items *[]Item) error
+	AddItems(ctx context.Context, items *[]Item, vendor string) error
 }
