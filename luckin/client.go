@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const baseUrl = "https://in.luckincoffee.com"
+
 type apiRequest struct {
 	DeliveryType int       `json:"deliveryType"`
 	DeptId       string    `json:"deptId"`
