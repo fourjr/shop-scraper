@@ -183,11 +183,14 @@ func RequestAll() (allItems []db.Item, errors []error) {
 	if err != nil {
 		return nil, []error{fmt.Errorf("failed to get shops: %v", err)}
 	}
+	noSkip := os.Getenv("LUCKIN_NOSKIP")
 
 	for _, shop := range *shops {
-		if shop.DeptId != 977 && shop.DeptId != 910 && shop.DeptId != 1180 && shop.DeptId != 286 && shop.DeptId != 950 && shop.DeptId != 309 {
-			// TEMP ONLY GENEO
-			continue
+		if noSkip == "" {
+			if shop.DeptId != 977 && shop.DeptId != 910 && shop.DeptId != 1180 && shop.DeptId != 286 && shop.DeptId != 950 && shop.DeptId != 309 {
+				// TEMP ONLY GENEO
+				continue
+			}
 		}
 		if !shop.Open {
 			continue
