@@ -151,14 +151,18 @@ func getShops() (*[]Shop, error) {
 			ShopList []Shop `json:"shopList"`
 		} `json:"content"`
 	}
-	if err := json.NewDecoder(resp).Decode(&response); err != nil {
+	rawContent, err := io.ReadAll(resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %v", err)
+	}
+	if err := json.Unmarshal(rawContent, &response); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
 	if response.Code != 1 {
-		return nil, fmt.Errorf("api request failed with error code %d: %s", response.Code, response.BusiCode)
+		return nil, fmt.Errorf("api request failed with error code %d: %s - %s", response.Code, response.BusiCode, string(rawContent))
 	}
 	if response.BusiCode != "200" {
-		return nil, fmt.Errorf("api request failed with busi code %s", response.BusiCode)
+		return nil, fmt.Errorf("api request failed with busi code %s - %s", response.BusiCode, string(rawContent))
 	}
 
 	return &response.Content.ShopList, nil
@@ -191,6 +195,7 @@ func RequestAll() (*[]db.Item, error) {
 		}
 
 		allItems = append(allItems, *items)
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	return &allItems, nil
