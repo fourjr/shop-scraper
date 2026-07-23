@@ -199,6 +199,7 @@ func RequestAll() (allItems []db.Item, errors []error) {
 			continue
 		}
 		response, err := request(shop)
+		defer time.Sleep(500 * time.Millisecond)
 		if err != nil {
 			errors = append(errors, fmt.Errorf("API request failed for shop %s: %v", shop.ShopId, err))
 			continue
@@ -215,7 +216,6 @@ func RequestAll() (allItems []db.Item, errors []error) {
 		}
 
 		allItems = append(allItems, *items)
-		time.Sleep(500 * time.Millisecond)
 	}
 
 	return allItems, errors
