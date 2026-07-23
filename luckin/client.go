@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"shops/db"
 	"shops/http"
@@ -181,7 +180,6 @@ func RequestAll() (allItems []db.Item, errors []error) {
 			continue
 		}
 		if !shop.Open {
-			log.Println("[luckin] Skipping closed shop: ", shop.DeptId)
 			continue
 		}
 		response, err := request(shop)
