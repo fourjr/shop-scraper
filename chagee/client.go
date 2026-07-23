@@ -73,15 +73,15 @@ func parseResponse(body io.ReadCloser) (*[]db.Item, error) {
 	return &items, nil
 }
 
-func RequestAll() (*[]db.Item, error) {
+func RequestAll() (*[]db.Item, []error) {
 	response, err := request()
 	if err != nil {
-		return nil, fmt.Errorf("API request failed: %v", err)
+		return nil, []error{fmt.Errorf("API request failed: %v", err)}
 	}
 	defer response.Close()
 	items, err := parseResponse(response)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse API response: %v", err)
+		return nil, []error{fmt.Errorf("failed to parse API response: %v", err)}
 	}
 	// log.Printf("Successfully retrieved %d items", len(*items))
 	return items, nil

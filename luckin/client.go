@@ -168,13 +168,12 @@ func getShops() (*[]Shop, error) {
 	return &response.Content.ShopList, nil
 }
 
-func RequestAll() (*[]db.Item, error) {
+func RequestAll() (allItems *[]db.Item, errors []error) {
 	shops, err := getShops()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get shops: %v", err)
+		return nil, []error{fmt.Errorf("failed to get shops: %v", err)}
 	}
 
-	var allItems []db.Item
 	for _, shop := range *shops {
 		if shop.DeptId != 977 && shop.DeptId != 910 && shop.DeptId != 1180 && shop.DeptId != 286 && shop.DeptId != 950 && shop.DeptId != 309 {
 			// TEMP ONLY GENEO
@@ -185,18 +184,20 @@ func RequestAll() (*[]db.Item, error) {
 		}
 		response, err := request(shop)
 		if err != nil {
-			return nil, fmt.Errorf("API request failed for shop %s: %v", shop.ShopId, err)
+			errors = append(errors, fmt.Errorf("API request failed for shop %s: %v", shop.ShopId, err))
+			continue
 		}
 		defer response.Close()
 
 		items, err := parseResponse(shop, response)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse API response for shop %s: %v", shop.ShopId, err)
+			errors = append(errors, fmt.Errorf("failed to parse API response for shop %s: %v", shop.ShopId, err))
+			continue
 		}
 
-		allItems = append(allItems, *items)
+		*allItems = append(*allItems, *items)
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	return &allItems, nil
+	return allItems, errors
 }

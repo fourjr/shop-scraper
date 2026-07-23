@@ -13,28 +13,36 @@ import (
 )
 
 func doChagee(db db.Client) error {
-	items, err := chagee.RequestAll()
-	if err != nil {
-		return fmt.Errorf("failed to request items from Chagee: %w", err)
+	items, errors := chagee.RequestAll()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			log.Printf("[chagee] Error occurred: %v", err)
+		}
 	}
-	err = db.AddItems(context.Background(), items, "chagee")
-	if err != nil {
-		return fmt.Errorf("failed to add items to database: %w", err)
+	if items != nil {
+		err := db.AddItems(context.Background(), items, "chagee")
+		if err != nil {
+			return fmt.Errorf("failed to add items to database: %w", err)
+		}
+		log.Printf("[chagee] Successfully added %d items", len(*items))
 	}
-	log.Printf("[chagee] Successfully added %d items", len(*items))
 	return nil
 }
 
 func doLuckin(db db.Client) error {
-	items, err := luckin.RequestAll()
-	if err != nil {
-		return fmt.Errorf("failed to request items from Luckin: %w", err)
+	items, errors := luckin.RequestAll()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			log.Printf("[luckin] Error occurred: %v", err)
+		}
 	}
-	err = db.AddItems(context.Background(), items, "luckin")
-	if err != nil {
-		return fmt.Errorf("failed to add items to database: %w", err)
+	if items != nil {
+		err := db.AddItems(context.Background(), items, "luckin")
+		if err != nil {
+			return fmt.Errorf("failed to add items to database: %w", err)
+		}
+		log.Printf("[luckin] Successfully added %d items", len(*items))
 	}
-	log.Printf("[luckin] Successfully added %d items", len(*items))
 	return nil
 }
 
