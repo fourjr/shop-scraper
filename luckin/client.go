@@ -2,6 +2,7 @@ package luckin
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -83,16 +84,25 @@ func request(shop Shop) (io.ReadCloser, error) {
 	return resp, nil
 }
 
+var ShopClosedError = errors.New("shop is closed")
+
 func parseResponse(shop Shop, body io.ReadCloser) (*db.Item, error) {
+	rawContent, err := io.ReadAll(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %v", err)
+	}
 	var response apiResponse
-	if err := json.NewDecoder(body).Decode(&response); err != nil {
+	if err := json.Unmarshal(rawContent, &response); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
+	if response.Code == 7 {
+		return nil, ShopClosedError
+	}
 	if response.Code != 1 {
-		return nil, fmt.Errorf("api request failed with error code %d: %s", response.Code, response.BusiCode)
+		return nil, fmt.Errorf("api request failed with error code %d: %s - %s", response.Code, response.BusiCode, string(rawContent))
 	}
 	if response.BusiCode != "200" {
-		return nil, fmt.Errorf("api request failed with busi code %s", response.BusiCode)
+		return nil, fmt.Errorf("api request failed with busi code %s - %s", response.BusiCode, string(rawContent))
 	}
 
 	msWaitTime := response.Content.AboutTime - response.Content.ProductList[0].AddTime
@@ -191,6 +201,9 @@ func RequestAll() (allItems []db.Item, errors []error) {
 
 		items, err := parseResponse(shop, response)
 		if err != nil {
+			if err == ShopClosedError {
+				continue
+			}
 			errors = append(errors, fmt.Errorf("failed to parse API response for shop %s: %v", shop.ShopId, err))
 			continue
 		}
