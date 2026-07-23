@@ -6,15 +6,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type Postgres struct {
-	db *pgx.Conn
+	db *pgxpool.Pool
 }
 
 func NewPostgres(ctx context.Context, uri string) (*Postgres, error) {
-	conn, err := pgx.Connect(ctx, uri)
+	conn, err := pgxpool.Connect(ctx, uri)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -25,8 +25,8 @@ func NewPostgres(ctx context.Context, uri string) (*Postgres, error) {
 	return pg, nil
 }
 
-func (c *Postgres) AddItems(ctx context.Context, items *[]Item, vendor string) error {
-	if items == nil || len(*items) == 0 {
+func (c *Postgres) AddItems(ctx context.Context, items []Item, vendor string) error {
+	if items == nil || len(items) == 0 {
 		return nil
 	}
 
@@ -36,8 +36,8 @@ func (c *Postgres) AddItems(ctx context.Context, items *[]Item, vendor string) e
 		store_id, store_name, vendor, raw_data, waiting_cups, waiting_time, coordinates
 	) VALUES `)
 
-	args := make([]any, 0, len(*items)*fieldsPerItem)
-	for i, item := range *items {
+	args := make([]any, 0, len(items)*fieldsPerItem)
+	for i, item := range items {
 		if i > 0 {
 			query.WriteString(", ")
 		}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"shops/db"
 	"shops/http"
@@ -168,19 +169,19 @@ func getShops() (*[]Shop, error) {
 	return &response.Content.ShopList, nil
 }
 
-func RequestAll() (allItems *[]db.Item, errors []error) {
+func RequestAll() (allItems []db.Item, errors []error) {
 	shops, err := getShops()
 	if err != nil {
 		return nil, []error{fmt.Errorf("failed to get shops: %v", err)}
 	}
 
-	allItems = &[]db.Item{}
 	for _, shop := range *shops {
 		if shop.DeptId != 977 && shop.DeptId != 910 && shop.DeptId != 1180 && shop.DeptId != 286 && shop.DeptId != 950 && shop.DeptId != 309 {
 			// TEMP ONLY GENEO
 			continue
 		}
 		if !shop.Open {
+			log.Println("[luckin] Skipping closed shop: ", shop.DeptId)
 			continue
 		}
 		response, err := request(shop)
@@ -196,7 +197,7 @@ func RequestAll() (allItems *[]db.Item, errors []error) {
 			continue
 		}
 
-		*allItems = append(*allItems, *items)
+		allItems = append(allItems, *items)
 		time.Sleep(500 * time.Millisecond)
 	}
 

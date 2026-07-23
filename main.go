@@ -10,6 +10,7 @@ import (
 	"shops/luckin"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/sync/errgroup"
 )
 
 func doChagee(db db.Client) error {
@@ -24,7 +25,7 @@ func doChagee(db db.Client) error {
 		if err != nil {
 			return fmt.Errorf("failed to add items to database: %w", err)
 		}
-		log.Printf("[chagee] Successfully added %d items", len(*items))
+		log.Printf("[chagee] Successfully added %d items", len(items))
 	}
 	return nil
 }
@@ -41,7 +42,7 @@ func doLuckin(db db.Client) error {
 		if err != nil {
 			return fmt.Errorf("failed to add items to database: %w", err)
 		}
-		log.Printf("[luckin] Successfully added %d items", len(*items))
+		log.Printf("[luckin] Successfully added %d items", len(items))
 	}
 	return nil
 }
@@ -51,15 +52,32 @@ func main() {
 	if err != nil && os.Getenv("DOCKER") == "" {
 		panic(fmt.Sprintf("failed to load .env file: %v", err))
 	}
-	db, err := db.NewPostgres(context.Background(), os.Getenv("POSTGRES_URI"))
+
+	db, err := db.NewPostgres(
+		context.Background(),
+		os.Getenv("POSTGRES_URI"),
+	)
 	if err != nil {
 		panic(fmt.Sprintf("failed to connect to database: %v", err))
 	}
 
-	if err := doChagee(db); err != nil {
-		panic(fmt.Sprintf("failed to process Chagee items: %v", err))
-	}
-	if err := doLuckin(db); err != nil {
-		panic(fmt.Sprintf("failed to process Luckin items: %v", err))
+	var group errgroup.Group
+
+	group.Go(func() error {
+		if err := doChagee(db); err != nil {
+			return fmt.Errorf("failed to process Chagee items: %w", err)
+		}
+		return nil
+	})
+
+	group.Go(func() error {
+		if err := doLuckin(db); err != nil {
+			return fmt.Errorf("failed to process Luckin items: %w", err)
+		}
+		return nil
+	})
+
+	if err := group.Wait(); err != nil {
+		panic(err)
 	}
 }

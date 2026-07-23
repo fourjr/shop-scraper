@@ -14,5 +14,5 @@ type Item struct {
 }
 
 type Client interface {
-	AddItems(ctx context.Context, items *[]Item, vendor string) error
+	AddItems(ctx context.Context, items []Item, vendor string) error
 }
