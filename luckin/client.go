@@ -98,6 +98,9 @@ func parseResponse(shop Shop, body io.ReadCloser) (*db.Item, error) {
 	if response.Code == 7 {
 		return nil, ShopClosedError
 	}
+	if response.Code == 5 {
+		return nil, fmt.Errorf("account error - code %d: %s - %s", response.Code, response.BusiCode, string(rawContent))
+	}
 	if response.Code != 1 {
 		return nil, fmt.Errorf("api request failed with error code %d: %s - %s", response.Code, response.BusiCode, string(rawContent))
 	}
