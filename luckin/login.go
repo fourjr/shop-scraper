@@ -8,6 +8,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sync"
+)
+
+var (
+	publicKeyOnce sync.Once
+	publicKey     *rsa.PublicKey
+	publicKeyErr  error
 )
 
 func RefreshLoginToken(email, password string) (string, error) {
@@ -52,6 +59,14 @@ func RefreshLoginToken(email, password string) (string, error) {
 }
 
 func getPublicKey() (*rsa.PublicKey, error) {
+	publicKeyOnce.Do(func() {
+		publicKey, publicKeyErr = fetchPublicKey()
+	})
+
+	return publicKey, publicKeyErr
+}
+
+func fetchPublicKey() (*rsa.PublicKey, error) {
 	config := struct {
 		Keys []string `json:"keys"`
 	}{
