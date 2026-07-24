@@ -8,4 +8,10 @@ CREATE TABLE IF NOT EXISTS entry (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     coordinates POINT NOT NULL,
     PRIMARY KEY (store_id, vendor, created_at)
-)
+);
+
+CREATE TABLE IF NOT EXISTS luckin_login (
+    email VARCHAR(255) PRIMARY KEY,
+    password VARCHAR(255) NOT NULL,
+    token CHAR(172)
+);

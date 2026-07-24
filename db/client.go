@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"shops/models"
 	"strings"
 
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -25,8 +26,8 @@ func NewPostgres(ctx context.Context, uri string) (*Postgres, error) {
 	return pg, nil
 }
 
-func (c *Postgres) AddItems(ctx context.Context, items []Item, vendor string) error {
-	if items == nil || len(items) == 0 {
+func (c *Postgres) AddItems(ctx context.Context, items []models.DBItem, vendor string) error {
+	if len(items) == 0 {
 		return nil
 	}
 

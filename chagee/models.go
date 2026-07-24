@@ -1,6 +1,6 @@
 package chagee
 
-import "shops/db"
+import "shops/models"
 
 type Item struct {
 	StoreId       string `json:"storeNo"`
@@ -13,6 +13,6 @@ type Item struct {
 	RawData       string `json:"-"`
 }
 
-func (i Item) ToDBItem() db.Item {
-	return db.Item(i)
+func (i Item) ToDBItem() models.DBItem {
+	return models.DBItem(i)
 }

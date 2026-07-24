@@ -3,14 +3,13 @@ package http
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 )
 
 const defaultTimeout = 10 * time.Second
 
-func DoPost(url string, body []byte, headers map[string]string) (io.ReadCloser, error) {
+func DoPost(url string, body []byte, headers map[string]string) (*http.Response, error) {
 	client := &http.Client{
 		Timeout: defaultTimeout,
 	}
@@ -30,5 +29,5 @@ func DoPost(url string, body []byte, headers map[string]string) (io.ReadCloser, 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("request failed with status: %s", resp.Status)
 	}
-	return resp.Body, nil
+	return resp, nil
 }

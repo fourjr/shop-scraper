@@ -1,14 +1,14 @@
 package luckin
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"shops/db"
 	"shops/http"
-	"strings"
+	"shops/models"
 	"time"
 )
 
@@ -55,16 +55,22 @@ func buildRequest(deptId int) apiRequest {
 	}
 }
 
-func request(shop Shop) (io.ReadCloser, error) {
-	tokens := os.Getenv("LUCKIN_TOKENS")
-	if tokens == "" {
-		panic("LUCKIN_TOKENS environment variable must be set")
-	}
+type LuckinAccounter interface {
+	GetLuckinAccount(context.Context, int) (*models.LuckinAccount, error)
+	UpdateLuckinToken(context.Context, models.LuckinAccount) (string, error)
+}
 
-	allTokens := strings.Split(tokens, ",")
+func getConsideration(deptId int) int {
 	currHr := time.Now().Hour() + time.Now().Day()*24
-	consideration := shop.DeptId + currHr
-	token := allTokens[consideration%len(allTokens)]
+	return deptId + currHr
+}
+
+func request(ctx context.Context, am LuckinAccounter, shop Shop) (io.ReadCloser, error) {
+	consideration := getConsideration(shop.DeptId)
+	token, err := am.GetLuckinAccount(ctx, consideration)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get luckin account: %v", err)
+	}
 
 	body := buildRequest(shop.DeptId)
 	reader, err := json.Marshal(body)
@@ -74,19 +80,21 @@ func request(shop Shop) (io.ReadCloser, error) {
 
 	resp, err := http.DoPost(baseUrl+"/api/capi/resource/isalestradecapi/order/preview",
 		reader, map[string]string{
-			"Content-Type": "application/json",
-			"Cookie":       fmt.Sprintf("LK_PROD_ILUCKYINWAP_SID=%s; lk_isLogin=true; ", token),
+			"Content-Type":    "application/json",
+			"Accept-Language": "en-US",
+			"Cookie":          fmt.Sprintf("LK_PROD_ILUCKYINWAP_SID=%s; lk_isLogin=true; ", *token.Token),
 		})
 	if err != nil {
 		return nil, fmt.Errorf("failed to make API request: %v", err)
 	}
 
-	return resp, nil
+	return resp.Body, nil
 }
 
 var ShopClosedError = errors.New("shop is closed")
+var AccountError = errors.New("account error")
 
-func parseResponse(shop Shop, body io.ReadCloser) (*db.Item, error) {
+func parseResponse(shop Shop, body io.ReadCloser) (*models.DBItem, error) {
 	rawContent, err := io.ReadAll(body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %v", err)
@@ -99,7 +107,7 @@ func parseResponse(shop Shop, body io.ReadCloser) (*db.Item, error) {
 		return nil, ShopClosedError
 	}
 	if response.Code == 5 {
-		return nil, fmt.Errorf("account error - code %d: %s - %s", response.Code, response.BusiCode, string(rawContent))
+		return nil, AccountError
 	}
 	if response.Code != 1 {
 		return nil, fmt.Errorf("api request failed with error code %d: %s - %s", response.Code, response.BusiCode, string(rawContent))
@@ -113,7 +121,7 @@ func parseResponse(shop Shop, body io.ReadCloser) (*db.Item, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal shop data: %v", err)
 	}
-	return &db.Item{
+	return &models.DBItem{
 		StoreId:     fmt.Sprintf("%d-%s", shop.DeptId, shop.ShopId),
 		StoreName:   shop.StoreName,
 		Longitude:   fmt.Sprintf("%.6f", shop.Longitude),
@@ -123,65 +131,7 @@ func parseResponse(shop Shop, body io.ReadCloser) (*db.Item, error) {
 	}, nil
 }
 
-type cityPageRequest struct {
-	Type  int `json:"type"`
-	Limit int `json:"limit"`
-}
-
-type Shop struct {
-	DeptId    int     `json:"deptId"`
-	ShopId    string  `json:"shopNo"`
-	StoreName string  `json:"shopName"`
-	Longitude float64 `json:"locationLongitude"`
-	Latitude  float64 `json:"locationLatitude"`
-	Open      bool    `json:"beOpening"`
-}
-
-func getShops() (*[]Shop, error) {
-	request := cityPageRequest{
-		Type:  1,
-		Limit: 1000,
-	}
-	reader, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request body: %v", err)
-	}
-
-	resp, err := http.DoPost(baseUrl+"/api/capi/resource/locate/shop/inCityPage",
-		reader, map[string]string{
-			"Content-Type": "application/json",
-			"X-LK-Tenant":  "LKSG",
-		})
-	if err != nil {
-		return nil, fmt.Errorf("failed to make API request: %v", err)
-	}
-	defer resp.Close()
-
-	var response struct {
-		BusiCode string `json:"busiCode"`
-		Code     int    `json:"code"`
-		Content  struct {
-			ShopList []Shop `json:"shopList"`
-		} `json:"content"`
-	}
-	rawContent, err := io.ReadAll(resp)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %v", err)
-	}
-	if err := json.Unmarshal(rawContent, &response); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %v", err)
-	}
-	if response.Code != 1 {
-		return nil, fmt.Errorf("api request failed with error code %d: %s - %s", response.Code, response.BusiCode, string(rawContent))
-	}
-	if response.BusiCode != "200" {
-		return nil, fmt.Errorf("api request failed with busi code %s - %s", response.BusiCode, string(rawContent))
-	}
-
-	return &response.Content.ShopList, nil
-}
-
-func RequestAll() (allItems []db.Item, errors []error) {
+func RequestAll(ctx context.Context, accounter LuckinAccounter) (allItems []models.DBItem, errors []error) {
 	shops, err := getShops()
 	if err != nil {
 		return nil, []error{fmt.Errorf("failed to get shops: %v", err)}
@@ -190,7 +140,7 @@ func RequestAll() (allItems []db.Item, errors []error) {
 
 	for _, shop := range *shops {
 		if noSkip == "" {
-			if shop.DeptId != 977 && shop.DeptId != 910 && shop.DeptId != 1180 && shop.DeptId != 286 && shop.DeptId != 950 && shop.DeptId != 309 {
+			if shop.DeptId != 977 {
 				// TEMP ONLY GENEO
 				continue
 			}
@@ -198,7 +148,7 @@ func RequestAll() (allItems []db.Item, errors []error) {
 		if !shop.Open {
 			continue
 		}
-		response, err := request(shop)
+		response, err := request(ctx, accounter, shop)
 		defer time.Sleep(500 * time.Millisecond)
 		if err != nil {
 			errors = append(errors, fmt.Errorf("API request failed for shop %s: %v", shop.ShopId, err))
@@ -211,8 +161,34 @@ func RequestAll() (allItems []db.Item, errors []error) {
 			if err == ShopClosedError {
 				continue
 			}
-			errors = append(errors, fmt.Errorf("failed to parse API response for shop %s: %v", shop.ShopId, err))
-			continue
+			if err == AccountError {
+				// Attempt to update the token and retry the request
+				account, err := accounter.GetLuckinAccount(ctx, getConsideration(shop.DeptId))
+				if err != nil {
+					errors = append(errors, fmt.Errorf("failed to get luckin account for shop %s: %v", shop.ShopId, err))
+					continue
+				}
+				_, err = accounter.UpdateLuckinToken(ctx, *account)
+				if err != nil {
+					errors = append(errors, fmt.Errorf("failed to update token for shop %s: %v", shop.ShopId, err))
+					continue
+				}
+				// Retry the request with the new token
+				response, err = request(ctx, accounter, shop)
+				if err != nil {
+					errors = append(errors, fmt.Errorf("API request failed after token update for shop %s: %v", shop.ShopId, err))
+					continue
+				}
+				defer response.Close()
+				items, err = parseResponse(shop, response)
+				if err != nil {
+					errors = append(errors, fmt.Errorf("failed to parse API response after token update for shop %s: %v", shop.ShopId, err))
+					continue
+				}
+			} else {
+				errors = append(errors, fmt.Errorf("failed to parse API response for shop %s: %v", shop.ShopId, err))
+				continue
+			}
 		}
 
 		allItems = append(allItems, *items)

@@ -8,12 +8,13 @@ import (
 	"shops/chagee"
 	"shops/db"
 	"shops/luckin"
+	"shops/models"
 
 	"github.com/joho/godotenv"
 	"golang.org/x/sync/errgroup"
 )
 
-func doChagee(db db.Client) error {
+func doChagee(db models.DBClient) error {
 	items, errors := chagee.RequestAll()
 	if len(errors) > 0 {
 		for _, err := range errors {
@@ -30,8 +31,8 @@ func doChagee(db db.Client) error {
 	return nil
 }
 
-func doLuckin(db db.Client) error {
-	items, errors := luckin.RequestAll()
+func doLuckin(ctx context.Context, db models.DBClient) error {
+	items, errors := luckin.RequestAll(ctx, db)
 	if len(errors) > 0 {
 		for _, err := range errors {
 			log.Printf("[luckin] Error occurred: %v", err)
@@ -71,7 +72,7 @@ func main() {
 	})
 
 	group.Go(func() error {
-		if err := doLuckin(db); err != nil {
+		if err := doLuckin(context.Background(), db); err != nil {
 			return fmt.Errorf("failed to process Luckin items: %w", err)
 		}
 		return nil
