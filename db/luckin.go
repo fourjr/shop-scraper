@@ -25,7 +25,7 @@ func (c *Postgres) GetLuckinAccount(ctx context.Context, consideration int) (*mo
 	if account.Token == nil {
 		token, err := c.UpdateLuckinToken(ctx, account)
 		if err != nil {
-			return nil, fmt.Errorf("failed to update login token for email %s: %v", account.Email, err)
+			return nil, fmt.Errorf("failed to update login token for %s: %v", account.Email, err)
 		}
 		account.Token = &token
 	}
@@ -35,14 +35,14 @@ func (c *Postgres) GetLuckinAccount(ctx context.Context, consideration int) (*mo
 func (c *Postgres) UpdateLuckinToken(ctx context.Context, account models.LuckinAccount) (string, error) {
 	token, err := luckin.RefreshLoginToken(account.Email, account.Password)
 	if err != nil {
-		return "", fmt.Errorf("failed to refresh login token for email %s: %v", account.Email, err)
+		return "", fmt.Errorf("failed to refresh login token for %s: %v", account.Email, err)
 	}
 	_, err = c.db.Exec(ctx,
 		"UPDATE luckin_login SET token = $1 WHERE email = $2",
 		token, account.Email,
 	)
 	if err != nil {
-		return "", fmt.Errorf("failed to update login token for email %s: %v", account.Email, err)
+		return "", fmt.Errorf("failed to update login token for %s: %v", account.Email, err)
 	}
 	return token, nil
 }

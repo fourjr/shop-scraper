@@ -18,7 +18,7 @@ var (
 )
 
 func RefreshLoginToken(email, password string) (string, error) {
-	log.Printf("[luckin] warn: refreshing login token for email %s", email)
+	log.Printf("[luckin] warn: refreshing login token for %s", email)
 	encPassword, err := encryptPassword(password)
 	if err != nil {
 		return "", fmt.Errorf("failed to encrypt password: %v", err)
@@ -39,7 +39,6 @@ func RefreshLoginToken(email, password string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to make API request: %v", err)
 	}
-	defer resp.Body.Close()
 
 	if !response.PasswordVerified {
 		return "", fmt.Errorf("login failed: password verification failed")
