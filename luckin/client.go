@@ -40,7 +40,7 @@ type apiResponse struct {
 	} `json:"content"`
 }
 
-func buildRequest(deptId int) apiRequest {
+func buildgetPreview(deptId int) apiRequest {
 	skuCode := os.Getenv("LUCKIN_SKU_CODE")
 	spuCode := os.Getenv("LUCKIN_SPU_CODE")
 	if skuCode == "" || spuCode == "" {
@@ -65,24 +65,18 @@ func getConsideration(deptId int) int {
 	return deptId + currHr
 }
 
-func request(ctx context.Context, am LuckinAccounter, shop Shop) (io.ReadCloser, error) {
+func getPreview(ctx context.Context, am LuckinAccounter, shop Shop) (io.ReadCloser, error) {
 	consideration := getConsideration(shop.DeptId)
 	token, err := am.GetLuckinAccount(ctx, consideration)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get luckin account: %v", err)
 	}
 
-	body := buildRequest(shop.DeptId)
-	reader, err := json.Marshal(body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request body: %v", err)
-	}
+	body := buildgetPreview(shop.DeptId)
 
 	resp, err := http.DoPost(baseUrl+"/api/capi/resource/isalestradecapi/order/preview",
-		reader, map[string]string{
-			"Content-Type":    "application/json",
-			"Accept-Language": "en-US",
-			"Cookie":          fmt.Sprintf("LK_PROD_ILUCKYINWAP_SID=%s; lk_isLogin=true; ", *token.Token),
+		body, map[string]string{
+			"Cookie": fmt.Sprintf("LK_PROD_ILUCKYINWAP_SID=%s; lk_isLogin=true; ", *token.Token),
 		})
 	if err != nil {
 		return nil, fmt.Errorf("failed to make API request: %v", err)
@@ -136,19 +130,12 @@ func RequestAll(ctx context.Context, accounter LuckinAccounter) (allItems []mode
 	if err != nil {
 		return nil, []error{fmt.Errorf("failed to get shops: %v", err)}
 	}
-	noSkip := os.Getenv("LUCKIN_NOSKIP")
 
 	for _, shop := range *shops {
-		if noSkip == "" {
-			if shop.DeptId != 977 {
-				// TEMP ONLY GENEO
-				continue
-			}
-		}
 		if !shop.Open {
 			continue
 		}
-		response, err := request(ctx, accounter, shop)
+		response, err := getPreview(ctx, accounter, shop)
 		defer time.Sleep(500 * time.Millisecond)
 		if err != nil {
 			errors = append(errors, fmt.Errorf("API request failed for shop %s: %v", shop.ShopId, err))
@@ -174,7 +161,7 @@ func RequestAll(ctx context.Context, accounter LuckinAccounter) (allItems []mode
 					continue
 				}
 				// Retry the request with the new token
-				response, err = request(ctx, accounter, shop)
+				response, err = getPreview(ctx, accounter, shop)
 				if err != nil {
 					errors = append(errors, fmt.Errorf("API request failed after token update for shop %s: %v", shop.ShopId, err))
 					continue

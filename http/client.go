@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -9,15 +10,22 @@ import (
 
 const defaultTimeout = 10 * time.Second
 
-func DoPost(url string, body []byte, headers map[string]string) (*http.Response, error) {
+func DoPost(url string, body any, headers map[string]string) (*http.Response, error) {
 	client := &http.Client{
 		Timeout: defaultTimeout,
 	}
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
+	reader, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request body: %v", err)
+	}
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reader))
 	if err != nil {
 		return nil, err
 	}
 
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept-Language", "en-US")
+	req.Header.Set("Language", "en-US")
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}

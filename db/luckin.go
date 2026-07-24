@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"shops/luckin"
 	"shops/models"
@@ -15,6 +16,9 @@ func (c *Postgres) GetLuckinAccount(ctx context.Context, consideration int) (*mo
 		strconv.Itoa(consideration),
 	).Scan(&account.Email, &account.Password, &account.Token)
 	if err != nil {
+		if err.Error() == "no rows in result set" {
+			return nil, errors.New("no luckin account found in table luckin_login")
+		}
 		return nil, err
 	}
 

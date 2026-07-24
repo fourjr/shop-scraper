@@ -28,14 +28,8 @@ func request() (io.ReadCloser, error) {
 		PageSize:    100,
 		ChannelCode: "H5",
 	}
-	reader, err := json.Marshal(body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request body: %v", err)
-	}
 
-	resp, err := http.DoPost(baseUrl, reader, map[string]string{
-		"Content-Type":         "application/json",
-		"Language":             "en-us",
+	resp, err := http.DoPost(baseUrl, body, map[string]string{
 		"Region":               "SG",
 		"devicetimezoneregion": "Asia/Singapore",
 		"Channel":              "H5",
