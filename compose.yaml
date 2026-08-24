@@ -3,7 +3,7 @@ services:
     build: .
     environment:
       - POSTGRES_URI=postgres://db_user:db_pass@db:5432/shops
-      - DOCKER=1
+      - CONTAINER=1
     depends_on:
       db:
         condition: service_healthy

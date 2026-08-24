@@ -50,7 +50,7 @@ func doLuckin(ctx context.Context, db models.DBClient) error {
 
 func main() {
 	err := godotenv.Load()
-	if err != nil && os.Getenv("DOCKER") == "" {
+	if err != nil && os.Getenv("CONTAINER") == "" {
 		panic(fmt.Sprintf("failed to load .env file: %v", err))
 	}
 
