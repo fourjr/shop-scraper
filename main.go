@@ -7,6 +7,7 @@ import (
 	"os"
 	"shops/chagee"
 	"shops/db"
+	"shops/heytea"
 	"shops/luckin"
 	"shops/models"
 
@@ -48,6 +49,23 @@ func doLuckin(ctx context.Context, db models.DBClient) error {
 	return nil
 }
 
+func doHeytea(db models.DBClient) error {
+	items, errors := heytea.RequestAll()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			log.Printf("[heytea] Error occurred: %v", err)
+		}
+	}
+	if items != nil {
+		err := db.AddItems(context.Background(), items, "heytea")
+		if err != nil {
+			return fmt.Errorf("failed to add items to database: %w", err)
+		}
+		log.Printf("[heytea] Successfully added %d items", len(items))
+	}
+	return nil
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil && os.Getenv("CONTAINER") == "" {
@@ -78,6 +96,12 @@ func main() {
 		return nil
 	})
 
+	group.Go(func() error {
+		if err := doHeytea(db); err != nil {
+			return fmt.Errorf("failed to process Heytea items: %w", err)
+		}
+		return nil
+	})
 	if err := group.Wait(); err != nil {
 		panic(err)
 	}

@@ -40,7 +40,7 @@ type apiResponse struct {
 	} `json:"content"`
 }
 
-func buildgetPreview(deptId int) apiRequest {
+func buildGetPreview(deptId int) apiRequest {
 	skuCode := os.Getenv("LUCKIN_SKU_CODE")
 	spuCode := os.Getenv("LUCKIN_SPU_CODE")
 	if skuCode == "" || spuCode == "" {
@@ -72,7 +72,7 @@ func getPreview(ctx context.Context, am LuckinAccounter, shop Shop) (io.ReadClos
 		return nil, fmt.Errorf("failed to get luckin account: %v", err)
 	}
 
-	body := buildgetPreview(shop.DeptId)
+	body := buildGetPreview(shop.DeptId)
 
 	resp, err := http.DoPost(baseUrl+"/api/capi/resource/isalestradecapi/order/preview",
 		body, map[string]string{
